@@ -8,21 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Cart extends Model
 {
     use HasFactory;
-    protected $fillable=[
-        'product_id',
-        'user_id',
-        'quantity',
+    protected $table = 'cart';
+    protected $fillable =[
+      'user_id',
+      'product_id',
+      'quantity'
     ];
-protected $hidden=[
-'updated_at',
-'created_at',
-];
-protected $casts = [
-
-    'id' => 'array',
-];
-public function image()
-{
-    return $this->hasOne(Image::class,'product_id');
-}
 }

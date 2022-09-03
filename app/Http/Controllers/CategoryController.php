@@ -1,77 +1,54 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Helpers\Helper;
-use App\Models\Category;
+
+use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
+use App\Models\Category;
 
 class CategoryController extends Controller
 {
-    const TRUE = "true";
-    const FALSE= "false";
     public function index()
     {
         $category = Category::all();
-
-        if ($category) {
-            return  Helper::setresponse(Self::TRUE, $category, "false",200);
-        } else {
-            return  Helper::setresponse(Self::FALSE, "", "no data found ",404);
-        }
+        return view('admin.category', compact('category'));
     }
-    public function add_category(Request $request)
+    public function create()
     {
-        $validator =  Validator::make($request->all(), [
+        return view('admin.add-category');
+    }
+    public function store(Request $request)
+    {
+      $validatedData = $request->validate([
             'name' => 'required',
-            'status' => 'required',
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                "flag" => Self::FALSE,
-                "message" => $validator->errors()->first(),
-                "error" => 'validation_error',
-            ], 422);
-        }
+           'status' =>'required',
+          ]);
         $category = new Category();
-        $category->name = $request->name;
-        $category->status = $request->status;
+        $category->name = $request->input('name');
+        $category->status= $request->input('status');
         $category->save();
-       return  Helper::responseWithMessage(Self::TRUE, $category, 'category added successfully.',200);
-
+        return redirect()->route('category.index');
+    }
+    public function edit($id)
+    {
+        $category = Category::find($id);
+        return view('admin.edit-category', compact('category'));
     }
     public function update(Request $request, $id)
-    {
-        $validator =  Validator::make($request->all(), [
-            'name' => 'required',
-            'status' => 'required',
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                "flag" => Self::FALSE,
-                "message" => $validator->errors()->first(),
-                "error" => 'validation_error',
-            ], 422);
-        }
+    { 
         $category = Category::find($id);
-        if ($category) {
-            $category->name = $request->name;
-            $category->status = $request->status;
-            $category->update();
-            return  Helper::responseWithMessage(Self::TRUE, $category, 'category updated successfully.',200);
-        } else {
-            return  Helper::responseWithMessage(Self::FALSE, "", "no data found ",404);
-        }
+        $category->name = $request->input('name');
+        $category->status = $request->input('status');
+        $category->update();
+        return redirect()->route('category.index');
     }
     public function delete($id)
     {
         $category = Category::find($id);
-        if ($category) {
-            $category->delete();
-            return response()->json(['message' => 'category deleted successfully'],200);
-        } else {
-            return response()->json(['message' => 'no category found'],404);
-        }
+        $category->delete();
+        return redirect()->route('category.index');
     }
-
 }
