@@ -1,116 +1,108 @@
 <?php
 
 namespace App\Http\Controllers;
-use App\Helpers\Helper;
+
 use App\Models\Product;
+use App\Models\Subcategory;
+use App\Models\Category;
 use App\Models\Image;
-use App\Models\SubCategory;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Storage;
 
 class ProductController extends Controller
 {
-    const TRUE = "true";
-    const FALSE= "false";
-    public function product()
+    public function index()
     {
-        $product = Product::with('image')->get();
-
-        if ($product) {
-            return  Helper::setresponse(Self::TRUE, $product, "false",200);
-        } else {
-            return Helper::setresponse(Self::FALSE, "", "no data found ",404);
-        }
+    $image = Image::all();
+        $subcategory = product::all();
+        $product = product::with('image')->get();
+//  return @$product[2]->image[0]->image;
+        return view('admin.product', compact('product', 'subcategory','image'));
     }
-    public function     add_product(Request $request)
+    public function create()
     {
-        $validator =  Validator::make($request->all(), [
+        $image = Image::all();
+        $subcategory = Subcategory::all();
+        return view('admin.add-product', compact('subcategory'));
+    }
+    public function store(Request $request)
+    {
+        // dd($request);
+        $validatedData = $request->validate([
             'name' => 'required',
             'price' => 'required',
-            'discount' => 'required',
             'description' => 'required',
-            'stock' => 'required',
-            'subcategory_id' => 'required',
-            'quantity'=>'required',
-        ]);
-        if ($validator->fails()) {
-            return response()->json([
-                "flag" => Self::FALSE,
-                "message" => $validator->errors()->first(),
-                "error" => 'validation_error',
-            ], 422);
-        }
-        $subcategorys= SubCategory::where('id', $request->subcategory_id)->select('name')->first();
+            'discount' => 'required',
+            'image.*' => 'required',
+]);
         $product = new Product();
-        $product->name = $request->name;
-        $product->subcategory_id = $request->subcategory_id;
-        $product->price = $request->price;
-        $product->discount = $request->discount;
-        $product->description = $request->description;
-        $product->quantity = $request->quantity;
-        $product->stock = $request->stock;
+        $product->subcategory_id  = $request->subcategory;
+        $product->name = $request->input('name');
+        $product->price = $request->input('price');
+        $product->description = $request->input('description');
+        $product->discount = $request->input('discount');
         $product->save();
-        foreach ($request->file('image') as $image) {
-            $filename = rand(3000,10000).'.'.$image->getClientOriginalExtension();
-            $image->move(storage_path('app/public/image'), $filename );
-                        $image = new Image;
-                        $image->image = $filename;
-                        $image->product_id = $product->id;
-                        $image->save();
-                    }
-        return response()->json(['subcategory' => $subcategorys,'product' => $product,'image' => $image],200);
-
+        foreach ($request->file('image') as $image) {     
+            $filename = rand(3000, 10000).'_' .time(). '.' . $image->getClientOriginalExtension();
+            $image = $image->move(storage_path('app/public/image'), $filename);
+            $image = new Image;
+            $image->image = $filename;
+            $image->product_id = $product->id;
+            $image->save();
+        }
+        return redirect()->route('product.index');
     }
-    public function update_product(Request $request, $id)
-{
-    $product = Product::find($id);
-    if ($product) {
-        $product->name = $request->name;
-        $product->price = $request->price;
-        $product->discount = $request->discount;
-        $product->description = $request->description;
-        $product->quantity = $request->quantity;
-        $product->stock = $request->stock;
+    public function edit($id)
+    {
+        $subcategory = Subcategory::all();
+        $product = Product::find($id);
+        return view('admin.edit-product', compact('product', 'subcategory'));
+    }
+    public function update(Request $request, $id)
+    {
+       
+        $product = Product::find($id);
+        $imagefind = Image::where("product_id",$id)->first();
+        if(!$imagefind){
+            $validated = $request->validate([
+                'image' => 'required',
+            ]);
+        }
+        $product->subcategory_id  = $request->subcategory;
+        $product->name = $request->input('name');
+        $product->price = $request->input('price');
+        $product->description = $request->input('description');
+        $product->discount = $request->input('discount');
         $product->update();
+        if($request->file("image")!=null){
+
+        
         foreach ($request->file('image') as $image) {
-            $filename = rand(3000,10000).'.'.$image->getClientOriginalExtension();
-            $image->move(storage_path('public/image'), $filename );
-                        $image = new Image;
-                        $image->image = $filename;
-                        $image->product_id = $product->id;
-                        $image->save();
+            $filename =  rand(3000, 10000).'_' . time() . '.' . $image->getClientOriginalExtension();
+            $image = $image->move(storage_path('app/public/image'), $filename);
+            $image = new Image;
+            $image->image =$filename;
+            $image->product_id = $product->id;
+            $image->save();
         }
-        return response()->json(['product' => $product,'image' => $image],200);
-}
-}
-public function destory($id)
-{
-    $product = Product::find($id);
-    if ($product) {
+     }
+        return redirect()->route('product.index');
+ }
+    public function delete($id)
+    {
+        $product = Product::find($id);
         $product->delete();
-        return response()->json(['message' => 'product deleted successfully'],200);
-    } else {
-        return response()->json(['message' => 'no product found'],404);
+        return redirect()->route('product.index');
     }
-}
-public function image_delete(Request $request, $id)
-{
-    $image = Image::find($id);
-    if ($image) {
-        $filename = '/storage/image/' . $image->image;
-
-        if(File::exists($filename)){
-            File::delete($filename);
+    public function imagedelete($id)
+    {
+        $image = Image::find($id);
+        if (File_exists("/storage/image/" . $image)) {
+            unlink("/storage/image/" . $image);
         }
-        $image->delete();
-        return response()->json(['message' => 'image deleted successfully'],200);
-    } else {
-        return response()->json(['message' => 'no image found'],404);
-    }
+     $image=Image::find($id)->delete();
+        return redirect()->back();
+    } 
 }
 
 
-}
-
+    

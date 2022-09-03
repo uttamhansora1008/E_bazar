@@ -8,18 +8,10 @@ use Illuminate\Database\Eloquent\Model;
 class Rating extends Model
 {
     use HasFactory;
-    protected $fillable=[
-        'id',
-        'user_id',
-        'product_id',
-        'rating',
-        'reviews',
+    protected $table = 'ratings';
+    protected $fillable =[
+      'user_id',
+      'product_id',
+      'stars_rated'
     ];
-
-
-        public function product()
-        {
-          return $this->belongsTo(Product::class,'subcategory_id');
-        }
-
 }
